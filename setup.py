@@ -43,6 +43,10 @@ setup(
     package_dir={'taukit': 'taukit'},
     include_package_data=True,
     install_requires=[
+        'cerberus>=1.2',
+        'scrapy>=1.6.0',
+        'tldextract>=2.2.0',
+        'click>=7.0'
     ],
     license='MIT',
     zip_safe=False,

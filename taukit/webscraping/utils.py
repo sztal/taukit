@@ -6,7 +6,7 @@ can not be placed in `misc.processors`.
 import re
 from scrapy.http import HtmlResponse
 from w3lib.html import remove_tags, remove_comments, strip_html5_whitespace
-from w3lib.html import replace_entities, replace_escape_chars, replace_tags
+from w3lib.html import replace_entities, replace_escape_chars
 import tldextract as tld
 
 _rx_web_sectionize = re.compile(r"\n|\s\s+|\t")
@@ -38,8 +38,7 @@ def is_url_in_domains(url, domains):
         domains = [ domains ]
     return get_url_domain(url) in domains
 
-def normalize_web_content(x, keep=('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong'),
-                          token='____SECTION____'):
+def normalize_web_content(x, keep_tags=(), replace=()):
     """Normalize web content.
 
     Parameters
@@ -53,16 +52,16 @@ def normalize_web_content(x, keep=('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong')
     try:
         x = strip_html5_whitespace(x)
         x = remove_comments(x)
-        x = remove_tags(x, keep=keep)
-        if token:
-            x = replace_tags(x, token=token)
+        x = remove_tags(x, keep=keep_tags)
         x = replace_entities(x)
         x = replace_escape_chars(x)
     except (TypeError, AttributeError):
         pass
+    for old, new in replace:
+        x = x.replace(old, new)
     for part in _rx_web_sectionize.split(x):
         if part:
-            yield part
+            yield part.strip()
 
 def load_item(body, item_loader, item=None, url='placeholder_url',
               callback=None, encoding='utf-8'):
@@ -104,30 +103,6 @@ def load_item(body, item_loader, item=None, url='placeholder_url',
     item = loader.load_item()
     return item
 
-def sectionize(parts, first_is_heading=False):
-    """Join parts of the text after splitting into sections with headings.
-
-    This function assumes that a text was splitted at section headings,
-    so every two list elements after the first one is a heading-section pair.
-    This assumption is used to join sections with their corresponding headings.
-
-    Parameters
-    ----------
-    parts : list of str
-        List of text parts.
-    first_is_heading : bool
-        Should first element be treated as heading in lists of length greater than 1.
-    """
-    parts = parts.copy()
-    if len(parts) <= 1:
-        return parts
-    first = []
-    if not first_is_heading:
-        first.append(parts[0])
-        del parts[0]
-    sections = first + [ "\n".join(parts[i:i+2]) for i in range(0, len(parts), 2) ]
-    return sections
-
 def strip(x):
     """Strip a string.
 
@@ -152,4 +127,16 @@ def split(x, divider):
     """
     if isinstance(x, str):
         return x.split(divider)
+    return x
+
+def lower(x):
+    """Lower a string."""
+    if isinstance(x, str):
+        return x.lower()
+    return x
+
+def upper(x):
+    """Upper a string."""
+    if isinstance(x, str):
+        return x.upper()
     return x

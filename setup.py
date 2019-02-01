@@ -46,7 +46,8 @@ setup(
         'cerberus>=1.2',
         'scrapy>=1.6.0',
         'tldextract>=2.2.0',
-        'click>=7.0'
+        'click>=7.0',
+        'dateparser>=0.7.0'
     ],
     license='MIT',
     zip_safe=False,

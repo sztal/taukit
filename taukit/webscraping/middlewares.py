@@ -1,14 +1,6 @@
 """Custom scrapy middleware classes."""
-# -*- coding: utf-8 -*-
-
-# Define here the models for your spider middleware
-#
-# See documentation in:
-# https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
 # pylint: disable=W0613
-
-# from scrapy import signals
+from typing import Pattern
 from scrapy.exceptions import IgnoreRequest
 from .utils import is_url_in_domains
 
@@ -37,6 +29,6 @@ class OffsiteFinalUrlDownloaderMiddleware:
         # Blacklist check
         for bad_url in blacklist_urls:
             if (isinstance(bad_url, str) and url == bad_url) \
-            or bad_url.search(url):
+            or (isinstance(bad_url, Pattern) and bad_url.search(url)):
                 raise IgnoreRequest(request)
         return response

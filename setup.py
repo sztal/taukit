@@ -38,6 +38,7 @@ setup(
         'pytest-benchmark',
         'pytest-doctestplus',
         'coverage'
+        'pytest-cov'
     ],
     test_suite='tests',
     package_dir={'taukit': 'taukit'},

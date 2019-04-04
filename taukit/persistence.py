@@ -22,12 +22,13 @@ class Persister:
             Item name.
         """
         self.batch_size = batch_size
-        self.logger = logger if logger else getLogger(__name__)
+        self.logger = logger if logger else \
+            getLogger(__name__+'.'+self.__class__.__name__)
         self.counter = 0
         self.item_name = item_name
 
-    def persist(self, items):
-        """Persist an object."""
+    def persist(self, item):
+        """Persist an item."""
         raise NotImplementedError
 
     def load(self):
@@ -91,7 +92,12 @@ class FilePersister(Persister):
             )
         return self._filepath
 
-    def load(self, filepath=None):
+    @staticmethod
+    def load_file(filepath):
+        """Load data from a file."""
+        raise NotImplementedError
+
+    def load(self):
         """Load data saved to a file."""
         raise NotImplementedError
 
@@ -123,13 +129,15 @@ class JSONLinesPersister(FilePersister):
         self.json_encoder = json_encoder
         self.json_decoder = json_decoder
 
-    def persist(self, items):
-        for item in items:
-            json.dumps(item, cls=self.json_serializer)
+    def persist(self, item):
+        with open(self.filepath, 'a') as f:
+            f.write(json.dumps(item, cls=self.json_serializer).strip()+"\n")
 
-    def load(self, filepath=None):
-        if filepath is None:
-            filepath = self.filepath
+    @staticmethod
+    def load_file(filepath, json_decoder=None):
         with open(filepath, 'r') as f:
             for line in f:
-                yield json.loads(line.strip, cls=self.json_decoder)
+                yield json.loads(line.strip(), cls=json_decoder)
+
+    def load(self):
+        yield from self.load_file(self.filepath, json_decoder=self.json_decoder)

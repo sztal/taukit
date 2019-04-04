@@ -1,4 +1,5 @@
 """Base item and item loader classes."""
+import re
 from scrapy import Item as _Item
 from scrapy.loader import ItemLoader as _ItemLoader
 from scrapy.loader.processors import TakeFirst, MapCompose
@@ -22,13 +23,7 @@ class ItemLoader(_ItemLoader):
     # Methods -----------------------------------------------------------------
 
     def __init__(self, *args, **kwds):
-        """Initilization method.
-
-        Parameters
-        ----------
-        omit : list of str
-            List of fields to omit.
-        """
+        """Initilization method."""
         super().__init__(*args, **kwds)
         self._container = None
         self.data = None
@@ -55,27 +50,25 @@ class ItemLoader(_ItemLoader):
                 self.container_sel.__class__.__name__
             ))
 
-    def assign_selector(self, field_name, selector_name=None):
+    def assign_selector(self, field_name):
         """Assign selector to a field.
 
         Parameters
         ----------
         field_name : str
             Field name.
-        selector_name : str
-            Selector name. May not have the 'sel_' prefix.
         """
-        if not selector_name:
-            selector_name = field_name+'_sel'
-        selector = getattr(self, selector_name, None)
-        if selector is None:
+        rx = re.compile(field_name+r"_?\d*_sel")
+        selectors = [ getattr(self, s) for s in dir(self) if rx.match(s) ]
+        if not selectors:
             return
-        if isinstance(selector, XPath):
-            self._container.add_xpath(field_name, selector.selector)
-        elif isinstance(selector, CSS):
-            self._container.add_css(field_name, selector.selector)
-        else:
-            raise ValueError(f"Unknown selector type: {selector.__class__.__name__}")
+        for selector in selectors:
+            if isinstance(selector, XPath):
+                self._container.add_xpath(field_name, selector.selector)
+            elif isinstance(selector, CSS):
+                self._container.add_css(field_name, selector.selector)
+            else:
+                raise ValueError(f"Unknown selector type: {selector.__class__.__name__}")
 
     def setup(self, omit=()):
         """Setup loader selectors.

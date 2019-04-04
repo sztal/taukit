@@ -28,8 +28,7 @@ class UniversalJSONEncoder(JSONEncoder):
     """Universal JSON encoder.
 
     It tries to dump all non-serializable objects
-    (other than thos handled by
-    :py:class:`smcore).utils.serializers.JSONEncoder`)
+    (other than those handled by :py:class:`taukit.serializers.JSONEncoder`)
     to their standard string representation.
     """
     def default(self, o):

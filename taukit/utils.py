@@ -114,14 +114,11 @@ def make_path(*args, create_dir=True, **kwds):
         os.makedirs(dirpath, exist_ok=True, **kwds)
     return path
 
-def make_filepath(filename, dirpath, inc_if_taken=True, **kwds):
+def make_filepath(filename, dirpath, inc_if_taken=True):
     """Make filepath for a given filename.
 
     This function allows for not overwriting existing files
     and incrementing filename counter instead.
-    In such a case the filename must be a formattable string
-    with a named placeholder `{n}`. Other named placeholder may be
-    filled through `**kwds`.
 
     Parameters
     ----------
@@ -131,17 +128,19 @@ def make_filepath(filename, dirpath, inc_if_taken=True, **kwds):
         Directory path.
     inc_if_taken : bool
         Should file counter be used and incremented if a name is already taken.
-    **kwds :
-        Optional keyword arguments passed to the format string.
     """
+    def add_num(fn, n):
+        l = fn.split('.')
+        n = '-'+str(n)
+        if len(l) == 1:
+            return fn+n
+        return '.'.join(l[:-1])+n+'.'+l[-1]
     n = 0
-    _filepath = os.path.join(dirpath, filename)
-    filepath = _filepath
-    while inc_if_taken:
-        n += 1
-        filepath = _filepath.format(n=n, **kwds)
-        if not os.path.exists(filepath):
-            break
+    filepath = os.path.join(dirpath, filename)
+    if inc_if_taken:
+        while os.path.exists(filepath):
+            n += 1
+            filepath = os.path.join(dirpath, add_num(filename, n))
     return filepath
 
 def date_from_string(dt, fmt, preprocessor=None, **kwds):

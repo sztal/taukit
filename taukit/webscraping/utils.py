@@ -1,8 +1,4 @@
-"""Web and webscraping related utilities.
-
-This module also contain processors that for sake of avoiding circular imports
-can not be placed in `misc.processors`.
-"""
+"""Web and webscraping related utilities."""
 import re
 from scrapy.http import HtmlResponse
 from w3lib.html import remove_tags, remove_comments, strip_html5_whitespace

@@ -14,6 +14,7 @@ class TauSpiderMixin:
     ----------
     limit : int or None
         Limit for number of requests being made.
+        Useful for test purposes.
     allowed_domains : list of str
         This is a standard :py:module:`scrapy` spider class attribute,
         but it is documented here as it has an additional meaning:
@@ -71,11 +72,10 @@ class TauSpiderMixin:
         self.parse_extra_args()
         urls = self.get_start_urls()
         n = 0
+        start_urls_allowed_domains = getattr(self, 'start_urls_allowed_domains', None)
         for url in urls:
-            start_urls_allowed_domains = getattr(self, 'start_urls_allowed_domains', None)
-            if not start_urls_allowed_domains:
-                start_urls_allowed_domains = ()
-            if not is_url_in_domains(url, start_urls_allowed_domains):
+            if start_urls_allowed_domains is not None \
+            and not is_url_in_domains(url, start_urls_allowed_domains):
                 continue
             data = {'url': url}
             n += 1

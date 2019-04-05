@@ -2,7 +2,7 @@
 # pylint: disable=arguments-differ
 from logging import getLogger
 import json
-from .utils import safe_print, make_path, make_filepath
+from .utils import safe_print, make_path, make_filepath, slice_chunks
 from .serializers import JSONEncoder
 
 
@@ -177,7 +177,7 @@ class DBPersister(Persister):
         return "<{module}.{cls} with {model} model at {addr}>".format(
             module=self.__class__.__module__,
             cls=self.__class__.__name__,
-            model=self.model.__class__.__name__,
+            model=self.model.__name__,
             addr=hex(id(self))
         )
 
@@ -185,21 +185,55 @@ class DBPersister(Persister):
         rec = self.model.from_dict(item, **kwds)
         rec.persist()
 
-    def persist_many(self, items, log=True, **kwds):
+    def persist_many(self, items, action_hook, batch_size=None, log=True,
+                     n_attempts=3, **kwds):
         """Persist many items via a bulk update.
 
         Parameters
         ----------
-        items : sequence
-            Sequence of items.
+        items : iterable
+            Iterable of items.
+        action_hook : callable
+            Called at every item in `items`. Should return an object
+            corresponding to the desired bulk write operation.
+        batch_size : int
+            Batch size for updating. If non-positive then no limit is set.
+            If ``None`` then instance attribute is used.
         log : bool
             Should update be logged.
+        n_attempts : int
+            Number of attempts when failing.
         **kwds :
             Keyword arguments passed to model's `persist_many` method.
         """
-        info = self.model.persist_many(items, **kwds)
-        if log and self.logger:
-            self.logger.info("%s persisted: %s", str(self), str(info))
+        # pylint: disable=broad-except
+        if batch_size is None:
+            batch_size = self.batch_size
+        if batch_size <= 0:
+            items = [items]
+        else:
+            items = slice_chunks(items, batch_size)
+        results = {}
+        for chunk in items:
+            attempt = 0
+            while attempt < n_attempts:
+                try:
+                    r = self.model.persist_many(chunk, action_hook, **kwds)
+                    if log and self.logger:
+                        self.logger.info("%s persisted: %s", str(self), str(r))
+                    if not results:
+                        results = r
+                    else:
+                        for k in r:
+                            results[k] += r[k]
+                    break
+                except Exception as exc:
+                    attempt += 1
+                    self.logger.info("%s failed attempt %d\n%s",
+                                     str(self), attempt, str(exc))
+                    if attempt >= n_attempts:
+                        raise exc
+        return results
 
     def load(self, **kwds):
         yield from self.model.query(**kwds)

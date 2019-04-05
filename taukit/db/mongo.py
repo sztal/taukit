@@ -190,6 +190,28 @@ class DocumentMixin:
         """Query collection."""
         return cls.objects(**kwds)
 
+    @classmethod
+    def persist_many(cls, items, action_hook, bulk_write_kws=None, **kwds):
+        """Perform bulk write.
+
+        Parameters
+        ----------
+        docs : iterable
+            Documents to write / update.
+        action_hook : callable or None
+            Called at every item in `items`. Should return an object
+            corresponding to the desired bulk write operation.
+        bulk_write_kws : dict
+            Additional keyword arguments passed to `bulk_write`.
+        **kwds :
+            Keyword arguments passed additionaly to `action_hook` calls.
+        """
+        if bulk_write_kws is None:
+            bulk_write_kws = {}
+        bulk_ops = [ action_hook(item, **kwds) for item in items ]
+        res = cls._get_collection().bulk_write(bulk_ops, **bulk_write_kws)
+        return res.bulk_api_result
+
 
 class Document(_Document, DocumentMixin):
     """Document model class."""

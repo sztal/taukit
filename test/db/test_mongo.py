@@ -1,7 +1,9 @@
 """Test MongoDB models, model mixins and related utilities."""
 # pylint: disable=redefined-outer-name
 from datetime import datetime
+from itertools import repeat, chain
 import pytest
+from pymongo import InsertOne
 import mongoengine
 from mongoengine import StringField, IntField, DateTimeField, EmbeddedDocumentField
 from taukit.persistence import DBPersister
@@ -65,3 +67,10 @@ class TestMongoPersister:
         mongopers.persist(item)
         n1 = len(mongopers.model.query())
         assert n1 == n0 + 1
+
+    @pytest.mark.parametrize('items', [TEST_DOCUMENT_DATA])
+    @pytest.mark.parametrize('batch_size', [0, 50])
+    def test_persist_many(self, items, batch_size, mongopers):
+        items = [ x.copy() for x in chain.from_iterable(repeat(items, 50)) ]
+        output = mongopers.persist_many(items, InsertOne, batch_size=batch_size)
+        assert output['nInserted'] == 100

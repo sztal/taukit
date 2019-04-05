@@ -230,3 +230,14 @@ def parse_bool(x, true=('true', 'yes', '1', 'on'), add_true=(),
     if x in false:
         return False
     raise ValueError("Value '{}' can not be interpreted as boolean".format(x))
+
+def slice_chunks(x, n):
+    """Yield successive n-sized chunks from an iterable"""
+    l = []
+    for item in x:
+        l.append(item)
+        if len(l) >= n:
+            yield l
+            l = []
+    if l:
+        yield l

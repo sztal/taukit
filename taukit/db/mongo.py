@@ -181,6 +181,15 @@ class DocumentMixin:
             dct = { k: v for k, v in dct.items() if v is not None }
         return dct
 
+    def persist(self):
+        """Persist document."""
+        self.save()
+
+    @classmethod
+    def query(cls, **kwds):
+        """Query collection."""
+        return cls.objects(**kwds)
+
 
 class Document(_Document, DocumentMixin):
     """Document model class."""

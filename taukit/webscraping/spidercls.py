@@ -31,6 +31,11 @@ class TauSpiderMixin:
         List of accepted domains used for filtering the `start_urls`.
         This is useful when one want to give a lot of start URLs and make
         the spider care for selecting only the proper ones.
+    storage : {'full', 'nodb', 'no'}
+        Kind of storage to be used. If `'full'` (default) then both disk
+        and database persistence is used. If `'nodb'` then only disk is used.
+        If `'no'` then results are not persisted at tall.
+        Concrete spiders have to define proper persister objects.
     rules : list or tuple
         Documented in :py:class:`scrapy.spiders.CrawlSpider`.
     item_loader : ItemLoader
@@ -39,6 +44,7 @@ class TauSpiderMixin:
     name = None
     item_loader = None
     limit = None
+    storage = 'full'
 
     _logger = None
 
@@ -62,7 +68,13 @@ class TauSpiderMixin:
             self.limit = int(self.limit)
 
     def get_start_urls(self):
-        """Get start urls."""
+        """Get start urls.
+
+        Yields
+        ------
+        tuple
+            2-tuples with urls and additional metadata.
+        """
         if not self.start_urls:
             raise NotImplementedError
         yield from self.start_urls
@@ -73,15 +85,21 @@ class TauSpiderMixin:
         urls = self.get_start_urls()
         n = 0
         start_urls_allowed_domains = getattr(self, 'start_urls_allowed_domains', None)
-        for url in urls:
+        for url, data in urls:
             if start_urls_allowed_domains is not None \
             and not is_url_in_domains(url, start_urls_allowed_domains):
                 continue
-            data = {'url': url}
+            if not data:
+                data = {}
+            data.update(url=url)
             n += 1
             if self.limit and n > self.limit:
                 break
-            request = self.make_request(url, meta={ 'data': data })
+            try:
+                request = self.make_request(url, meta={ 'data': data })
+            # pylint: disable=broad-except
+            except Exception:
+                self.logger.exception("Failed to make a request")
             yield request
 
     def make_request(self, url, **kwds):

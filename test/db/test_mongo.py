@@ -63,9 +63,9 @@ class TestMongoPersister:
 
     @pytest.mark.parametrize('item', TEST_DOCUMENT_DATA)
     def test_persist_and_query(self, item, mongopers):
-        n0 = len(mongopers.model.query())
+        n0 = len(mongopers.query())
         mongopers.persist(item)
-        n1 = len(mongopers.model.query())
+        n1 = len(mongopers.query())
         assert n1 == n0 + 1
 
     @pytest.mark.parametrize('items', [TEST_DOCUMENT_DATA])

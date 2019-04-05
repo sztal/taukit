@@ -1,10 +1,11 @@
 """General purpose utilities."""
 import re
 import os
-import hashlib
+import io
 from importlib import import_module
 from datetime import datetime, date
 import dateparser
+import joblib
 from click import echo
 
 _rx_pp = re.compile(r"^[\w_.:]+$", re.ASCII)
@@ -67,19 +68,22 @@ def is_python_path(path, object_only=False):
         return False
     return True
 
-def hash_string(string, salt=None):
-    """Get MD5 hash from a string.
+def make_hash(obj, salt=None, **kwds):
+    """Make hash string from an object.
 
     Parameters
     ----------
-    string : str
-        Some string.
+    obj : object
+        Some python object.
     salt : str, False or None
         Optional salt added to the string for additional obfuscation.
+    **kwds :
+        Keyword arguments passed to :py:func:`joblib.hashing.hash`
     """
+    hash_id = joblib.hashing.hash(obj, **kwds)
     if salt is not None:
-        string += salt
-    return hashlib.md5(string.encode('utf-8')).hexdigest()
+        hash_id = joblib.hashing.hash(hash_id+salt)
+    return hash_id
 
 def is_file(path):
     """Tell if a path is a file path.
@@ -241,3 +245,45 @@ def slice_chunks(x, n):
             l = []
     if l:
         yield l
+
+def to_stream(obj):
+    """Dump object to a bytes stream."""
+    stream = io.BytesIO()
+    joblib.dump(obj, stream)
+    return stream
+
+def from_stream(obj):
+    """Load object from a bytes stream."""
+    return joblib.load(obj)
+
+def to_bytes(obj):
+    """Dump object to bytes."""
+    # pylint: disable=no-member
+    return to_stream(obj).getvalue()
+
+def from_bytes(obj):
+    """Load objects from bytes."""
+    return joblib.load(io.BytesIO(obj))
+
+def get_default(value, name, defaults):
+    """Get default value for a variable.
+
+    Parameters
+    ----------
+    value : any
+        Variable value.
+    name : str
+        Variable name.
+    defaults : dict
+        Dictionary of default values.
+
+    Notes
+    -----
+    Function operates on a shallow copy of `defaults`.
+    If deep copy is needed than it has to be done by hand
+    before passing `defaults` as an argument.
+    """
+    defaults = defaults.copy()
+    if value is None and name in defaults:
+        value = defaults[name]
+    return value

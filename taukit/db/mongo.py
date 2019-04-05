@@ -181,17 +181,12 @@ class DocumentMixin:
             dct = { k: v for k, v in dct.items() if v is not None }
         return dct
 
-    def persist(self):
+    def tk__persist(self):
         """Persist document."""
         self.save()
 
     @classmethod
-    def query(cls, **kwds):
-        """Query collection."""
-        return cls.objects(**kwds)
-
-    @classmethod
-    def persist_many(cls, items, action_hook, bulk_write_kws=None, **kwds):
+    def tk__persist_many(cls, items, action_hook, bulk_write_kws=None, **kwds):
         """Perform bulk write.
 
         Parameters
@@ -211,6 +206,45 @@ class DocumentMixin:
         bulk_ops = [ action_hook(item, **kwds) for item in items ]
         res = cls._get_collection().bulk_write(bulk_ops, **bulk_write_kws)
         return res.bulk_api_result
+
+    @classmethod
+    def tk__persist_many_merge_results(cls, results, new_result, logger=None):
+        """Merge results of `_persist_many`.
+
+        Parameters
+        ----------
+        results : dict
+            Bulk update results as returned by *PyMongo*.
+        new_result : dict
+            New bulk update results.
+        logger : logging.Logger
+            If define then it will be used to log results.
+        """
+        if not results:
+            results = {
+                'writeErrors': [],
+                'writeConcernErrors': [],
+                'nInserted': 0,
+                'nUpserted': 0,
+                'nMatched': 0,
+                'nModified': 0,
+                'nRemoved': 0
+            }
+        for k in results:
+            results[k] += new_result[k]
+        if logger:
+            logger.info("%s bulk update performed: %s", cls.__module__, str(results))
+        return results
+
+    @classmethod
+    def tk__query(cls, **kwds):
+        """Query collection."""
+        return cls.objects(**kwds)
+
+    @classmethod
+    def tk__drop(cls, **kwds):
+        # pylint: disable=unused-argument
+        cls.drop_collection()
 
 
 class Document(_Document, DocumentMixin):

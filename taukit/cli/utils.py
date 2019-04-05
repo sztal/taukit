@@ -4,6 +4,7 @@ from collections.abc import Sequence, Mapping
 import json
 from types import GeneratorType
 import click
+import joblib
 from ..utils import safe_print
 from ..serializers import UniversalJSONEncoder
 

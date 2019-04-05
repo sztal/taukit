@@ -3,6 +3,7 @@ import os
 from tempfile import mkdtemp
 import pytest
 from taukit.utils import import_python, make_filepath
+from taukit.utils import get_default
 import taukit.base.metacls
 from taukit.base.metacls import Composable
 
@@ -35,3 +36,17 @@ def test_make_filepath(increment, ext):
     except Exception as ex:
         f.close()
         raise ex
+
+@pytest.mark.parametrize('a', [10, None])
+@pytest.mark.parametrize('b', [5, None])
+def test_get_default(a, b):
+    defaults = {'a': 1, 'b': 1}
+    def func(a, b):
+        nonlocal defaults
+        a = get_default(a, 'a', defaults)
+        b = get_default(b, 'b', defaults)
+        return a + b
+
+    output = func(a, b)
+    expected = get_default(a, 'b', defaults) + get_default(b, 'b', defaults)
+    assert output == expected

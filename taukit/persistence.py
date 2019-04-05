@@ -1,7 +1,10 @@
 """Persister classes."""
-# pylint: disable=arguments-differ
+# pylint: disable=arguments-differ,protected-access
+import os
 from logging import getLogger
 import json
+from ftplib import FTP_TLS
+from ftplib import all_errors
 from .utils import safe_print, make_path, make_filepath, slice_chunks
 from .serializers import JSONEncoder
 
@@ -9,20 +12,16 @@ from .serializers import JSONEncoder
 class Persister:
     """Generic persister class."""
 
-    def __init__(self, logger=None, item_name='item'):
+    def __init__(self):
         """Initialization method.
 
         Parameters
         ----------
-        logger : logging.Logger
-            Logger object. Module-level logger is used if ``None``.
         item_name : str
             Item name.
         """
-        self.logger = logger if logger else \
-            getLogger(__name__+'.'+self.__class__.__name__)
+        self.logger = getLogger(__name__+'.'+self.__class__.__name__)
         self.counter = 0
-        self.item_name = item_name
 
     def persist(self, item, inc=True, inc_kws=None, **kwds):
         """Persist an item.
@@ -48,7 +47,7 @@ class Persister:
     def load(self, **kwds):
         raise NotImplementedError
 
-    def inc(self, print_num=True, msg="\rPersisting {item_name} no. {n}", **kwds):
+    def inc(self, print_num=True, msg="\rPersisting item no. {n}", **kwds):
         """Increment counter of processed items.
 
         Parameters
@@ -68,7 +67,6 @@ class Persister:
         self.counter += 1
         if print_num and self.counter > 1:
             safe_print(msg.format(
-                item_name=self.item_name,
                 n=self.counter,
                 **kwds
             ), nl=False)
@@ -78,7 +76,7 @@ class Persister:
 class FilePersister(Persister):
     """Generic file persister class."""
 
-    def __init__(self, filename, dirpath, logger=None, item_name='item'):
+    def __init__(self, filename, dirpath):
         """Initialization method.
 
         Parameters
@@ -88,7 +86,7 @@ class FilePersister(Persister):
         dirpath : str
             Persistence directory path.
         """
-        super().__init__(logger=logger, item_name=item_name)
+        super().__init__()
         self.filename = filename
         self.dirpath = dirpath
         self.json_serializer = JSONEncoder
@@ -118,7 +116,7 @@ class JSONLinesPersister(FilePersister):
     """JSON lines based file persister."""
 
     def __init__(self, filename, dirpath, json_encoder=JSONEncoder,
-                 json_decoder=None, logger=None, item_name='item'):
+                 json_decoder=None):
         """Initialization method.
 
         Parameters
@@ -135,8 +133,6 @@ class JSONLinesPersister(FilePersister):
         super().__init__(
             filename=filename,
             dirpath=dirpath,
-            logger=logger,
-            item_name=item_name
         )
         self.json_encoder = json_encoder
         self.json_decoder = json_decoder
@@ -158,7 +154,7 @@ class JSONLinesPersister(FilePersister):
 class DBPersister(Persister):
     """DB persister class."""
 
-    def __init__(self, model, batch_size=0, logger=None, item_name='item'):
+    def __init__(self, model, batch_size=0):
         """Initialization method.
 
         Parameters
@@ -169,7 +165,7 @@ class DBPersister(Persister):
             Default batch size when updating data.
             No limit if non-positive.
         """
-        super().__init__(logger=logger, item_name=item_name)
+        super().__init__()
         self.model = model
         self.batch_size = batch_size
 
@@ -183,10 +179,9 @@ class DBPersister(Persister):
 
     def persist_item(self, item, **kwds):
         rec = self.model.from_dict(item, **kwds)
-        rec.persist()
+        rec.tk__persist()
 
-    def persist_many(self, items, action_hook, batch_size=None, log=True,
-                     n_attempts=3, **kwds):
+    def persist_many(self, items, action_hook, batch_size=None, n_attempts=3, **kwds):
         """Persist many items via a bulk update.
 
         Parameters
@@ -199,8 +194,6 @@ class DBPersister(Persister):
         batch_size : int
             Batch size for updating. If non-positive then no limit is set.
             If ``None`` then instance attribute is used.
-        log : bool
-            Should update be logged.
         n_attempts : int
             Number of attempts when failing.
         **kwds :
@@ -213,19 +206,15 @@ class DBPersister(Persister):
             items = [items]
         else:
             items = slice_chunks(items, batch_size)
-        results = {}
+        results = None
         for chunk in items:
             attempt = 0
             while attempt < n_attempts:
                 try:
-                    r = self.model.persist_many(chunk, action_hook, **kwds)
-                    if log and self.logger:
-                        self.logger.info("%s persisted: %s", str(self), str(r))
-                    if not results:
-                        results = r
-                    else:
-                        for k in r:
-                            results[k] += r[k]
+                    r = self.model.tk__persist_many(chunk, action_hook, **kwds)
+                    results = self.model.tk__persist_many_merge_results(
+                        results, r, self.logger
+                    )
                     break
                 except Exception as exc:
                     attempt += 1
@@ -235,5 +224,124 @@ class DBPersister(Persister):
                         raise exc
         return results
 
+    def query(self, **kwds):
+        return self.model.tk__query(**kwds)
+
+    def drop_data(self, **kwds):
+        self.model.tk__drop(**kwds)
+
     def load(self, **kwds):
-        yield from self.model.query(**kwds)
+        yield from self.model.tk__query(**kwds)
+
+
+class FTPPersister:
+    """FTP persister class.
+
+    Attributes
+    ----------
+    host : str
+        Host string.
+    user : str
+        Username.
+    passwd : str
+        Password.
+    dirpath : str
+        Starting dirpath.
+    ftp : ftplib FTP client class
+        FTP client.
+    """
+    def __init__(self, host, user, passwd, dirpath=None, ftp=FTP_TLS, **kwds):
+        """Initialization method."""
+        super().__init__()
+        self.host = host
+        self.user = user
+        self.passwd = passwd
+        self.ftp = ftp
+        self._ftp = None
+        self.depth = 0
+        self.set_dirpath(dirpath, create=True)
+        self.ftp_kws = kwds if kwds else {}
+
+    def __enter__(self):
+        self._ftp = self.ftp(
+            host=self.host,
+            user=self.user,
+            passwd=self.passwd,
+        )
+
+    def __exit__(self, type, value, traceback):
+        # pylint: disable=redefined-builtin
+        self._ftp.close()
+
+    def move(self, dirpath, clb=None, create=True, **kwds):
+        """Move through directory tree.
+
+        Parameters
+        ----------
+        dirpath : str
+            Target directory.
+        clb : callable
+            Optional callback to call after reaching the target directory.
+        create : bool
+            Should missing directories on the path be created if needed.
+        **kwds :
+            Keyword arguments passed to the callback.
+        """
+        def _move(dirpath, clb, create, **kwds):
+            head, tail = os.path.split(dirpath)
+            if head and head != '/':
+                _move(head, clb=None, create=create, **kwds)
+            try:
+                self._ftp.cwd(tail)
+            except all_errors as exc:
+                if create:
+                    self._ftp.mkd(tail)
+                    self._ftp.cwd(tail)
+                else:
+                    raise exc
+            if clb:
+                clb(**kwds)
+
+        with self:
+            _move(dirpath, clb, create, **kwds)
+
+    def set_dirpath(self, dirpath, create=True):
+        """Set current directory path.
+
+        Parameters
+        ----------
+        dirpath : str
+            Proper directory path.
+        create : bool
+            Create missing directories if needed.
+        """
+        self.dirpath = dirpath
+        if dirpath is not None and create:
+            self.move(dirpath, create=True)
+
+    def store(self, name, fp, dtype, **kwds):
+        """Store a file.
+
+        Parameters
+        ----------
+        name : str
+            Filename.
+        fp : file-like
+            File-like obejct of a proper type.
+        dtype : {'binary', 'text'}
+            Data type.
+        """
+        if dtype.lower() == 'binary':
+            self._ftp.storbinary(f"STOR {name}", fp, **kwds)
+        elif dtype.lower() == 'text':
+            self._ftp.storlines(f"STOR {name}", fp, **kwds)
+        else:
+            raise ValueError(f"incorrect data type '{dtype}'")
+
+    def store_binary(self, name, fp, **kwds):
+        """Store a binary file."""
+        self.store(name, fp, dtype='binary', **kwds)
+
+    def store_text(self, name, fp, **kwds):
+        """Store a text file."""
+        self.store(name, fp, dtype='text', **kwds)

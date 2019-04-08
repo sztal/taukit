@@ -30,25 +30,32 @@ setup(
     author_email='stalaga@protonmail.com',
     url='https://github.com/sztal/taukit',
     packages=['taukit'],
-    setup_requires=['pytest-runner'],
+    setup_requires=[
+        'pytest-runner>=4.2,<5.0'
+    ],
     tests_require=[
-        'pytest',
-        'pylint',
-        'pytest-pylint',
-        'pytest-benchmark',
-        'pytest-doctestplus',
-        'coverage'
-        'pytest-cov'
+        'pytest>=4.2.0,<5.0.0',
+        'pylint>=2.1.1,<3.0.0',
+        'pytest-pylint>=0.12.2,<1.0.0',
+        'pytest-doctestplus>=0.2.0,<1.0.0',
+        'coverage>=4.5.1,<5.0.0'
+        'pytest-cov>=2.6.1,<3.0.0'
     ],
     test_suite='tests',
     package_dir={'taukit': 'taukit'},
     include_package_data=True,
     install_requires=[
-        'cerberus>=1.2',
-        'scrapy>=1.6.0',
-        'tldextract>=2.2.0',
-        'click>=7.0',
-        'dateparser>=0.7.0'
+        'cerberus>=1.2,<2.0',
+        'scrapy>=1.6.0,<2.0.0',
+        'w3lib>=1.20.0,<2.0.0',
+        'tldextract>=2.2.0,<3.0.0',
+        'click>=7.0,<8.0',
+        'dateparser>=0.7.0,<1.0.0',
+        'typing>=3.6.6,<4.0.0',
+        'ipython>=7.4.0,<8.0.0',
+        'mongoengine>=0.17.0,<1.0.0',
+        'pymongo>=3.7.2,<4.0.0',
+        'joblib>=0.13.2,<1.0.0'
     ],
     license='MIT',
     zip_safe=False,

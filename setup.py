@@ -29,7 +29,7 @@ setup(
     author='Szymon Talaga',
     author_email='stalaga@protonmail.com',
     url='https://github.com/sztal/taukit',
-    packages=['taukit'],
+    packages=[*find_packages()],
     setup_requires=[
         'pytest-runner>=4.2,<5.0'
     ],

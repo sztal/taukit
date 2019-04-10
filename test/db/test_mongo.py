@@ -6,7 +6,7 @@ import pytest
 from pymongo import InsertOne
 import mongoengine
 from mongoengine import StringField, IntField, DateTimeField, EmbeddedDocumentField
-from taukit.persistence import DBPersister
+from taukit.storage import MongoStorage
 from taukit.db.mongo import Document, EmbeddedDocument
 
 
@@ -33,8 +33,11 @@ def TestDocument(mdb):
     TestDoc.drop_collection()
 
 @pytest.fixture(scope='module')
-def mongopers(TestDocument):
-    return DBPersister(model=TestDocument)
+def mdbstore(TestDocument):
+    return MongoStorage(
+        model=TestDocument,
+        updater=InsertOne
+    )
 
 
 TEST_DOCUMENT_DATA = [{
@@ -62,15 +65,18 @@ class TestDocumentMixin:
 class TestMongoPersister:
 
     @pytest.mark.parametrize('item', TEST_DOCUMENT_DATA)
-    def test_persist_and_query(self, item, mongopers):
-        n0 = len(mongopers.query())
-        mongopers.persist(item)
-        n1 = len(mongopers.query())
+    def test_persist_and_query(self, item, mdbstore):
+        n0 = len(mdbstore.model.objects)
+        mdbstore.save(item)
+        n1 = len(mdbstore.model.objects)
         assert n1 == n0 + 1
 
     @pytest.mark.parametrize('items', [TEST_DOCUMENT_DATA])
     @pytest.mark.parametrize('batch_size', [0, 50])
-    def test_persist_many(self, items, batch_size, mongopers):
+    def test_persist_many(self, items, batch_size, TestDocument):
         items = [ x.copy() for x in chain.from_iterable(repeat(items, 50)) ]
-        output = mongopers.persist_many(items, InsertOne, batch_size=batch_size)
+        output = TestDocument.store(
+            batch_size=batch_size,
+            updater=InsertOne
+        ).bulk_update(items)
         assert output['nInserted'] == 100

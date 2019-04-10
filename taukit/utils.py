@@ -287,9 +287,3 @@ def get_default(value, name, defaults):
     if value is None and name in defaults:
         value = defaults[name]
     return value
-
-def if_else(cond, if_true, if_false):
-    """Return value based on condition."""
-    if cond:
-        return if_true
-    return if_false

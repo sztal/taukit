@@ -3,7 +3,7 @@ import os
 from tempfile import mkdtemp
 import pytest
 from taukit.utils import import_python, make_filepath
-from taukit.utils import get_default, if_else
+from taukit.utils import get_default
 import taukit.base.metacls
 from taukit.base.metacls import Composable
 
@@ -50,12 +50,3 @@ def test_get_default(a, b):
     output = func(a, b)
     expected = get_default(a, 'b', defaults) + get_default(b, 'b', defaults)
     assert output == expected
-
-@pytest.mark.parametrize('cond', [True, False])
-@pytest.mark.parametrize('if_true,if_false', [('a', 'b')])
-def test_if_else(cond, if_true, if_false):
-    output = if_else(cond, if_true, if_false)
-    if cond:
-        assert output == if_true
-    else:
-        assert output == if_false

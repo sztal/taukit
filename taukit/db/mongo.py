@@ -14,6 +14,16 @@ from mongoengine import BooleanField, IntField, FloatField, DateTimeField
 from mongoengine import DictField, ListField
 from mongoengine import EmbeddedDocumentField, EmbeddedDocumentListField
 from taukit.utils import parse_date, parse_bool
+from taukit.storage import MongoStorage
+
+
+def obj_to_query(obj, name):
+    if not isinstance(obj, dict):
+        return { name: obj }
+    query = {}
+    for k, v in obj.items():
+        query.update(**obj_to_query(v, name+'.'+k))
+    return query
 
 
 BASESCHEMA = {
@@ -56,7 +66,7 @@ class DocumentMixin:
     """Abstract document class mixin providing helper methods."""
 
     _field_names_map = {}
-    _ignore_fields = [ '_id', 'id' ]
+    _ignore_fields = ()
     _baseschema = BASESCHEMA
     _schema = None
     _schema_allow_unknown = False
@@ -181,70 +191,21 @@ class DocumentMixin:
             dct = { k: v for k, v in dct.items() if v is not None }
         return dct
 
-    def tk__persist(self):
-        """Persist document."""
-        self.save()
-
     @classmethod
-    def tk__persist_many(cls, items, action_hook, bulk_write_kws=None, **kwds):
-        """Perform bulk write.
+    def store(cls, **kwds):
+        """Get `MongoStorage` initialized on the collection.
 
         Parameters
         ----------
-        docs : iterable
-            Documents to write / update.
-        action_hook : callable or None
-            Called at every item in `items`. Should return an object
-            corresponding to the desired bulk write operation.
-        bulk_write_kws : dict
-            Additional keyword arguments passed to `bulk_write`.
         **kwds :
-            Keyword arguments passed additionaly to `action_hook` calls.
+            Keyword arguments passed to the
+            :py:class:`taukit.storage.MongoStorage`.
         """
-        if bulk_write_kws is None:
-            bulk_write_kws = {}
-        bulk_ops = [ action_hook(item, **kwds) for item in items ]
-        res = cls._get_collection().bulk_write(bulk_ops, **bulk_write_kws)
-        return res.bulk_api_result
-
-    @classmethod
-    def tk__persist_many_merge_results(cls, results, new_result, logger=None):
-        """Merge results of `_persist_many`.
-
-        Parameters
-        ----------
-        results : dict
-            Bulk update results as returned by *PyMongo*.
-        new_result : dict
-            New bulk update results.
-        logger : logging.Logger
-            If define then it will be used to log results.
-        """
-        if not results:
-            results = {
-                'writeErrors': [],
-                'writeConcernErrors': [],
-                'nInserted': 0,
-                'nUpserted': 0,
-                'nMatched': 0,
-                'nModified': 0,
-                'nRemoved': 0
-            }
-        for k in results:
-            results[k] += new_result[k]
-        if logger:
-            logger.info("%s bulk update performed: %s", cls.__module__, str(results))
-        return results
-
-    @classmethod
-    def tk__query(cls, **kwds):
-        """Query collection."""
-        return cls.objects(**kwds)
-
-    @classmethod
-    def tk__drop(cls, **kwds):
-        # pylint: disable=unused-argument
-        cls.drop_collection()
+        return MongoStorage(**{
+            'model': cls,
+            'updater': getattr(cls, 'updater', None),
+            **kwds
+        })
 
 
 class Document(_Document, DocumentMixin):

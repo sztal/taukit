@@ -2,8 +2,6 @@
 
 The mixins are supposed to enhance standard *MongoEngine* models
 with various helper methods for importing, exporting and validating data.
-They also expose a common API used by all DB models, which is utilized
-by database persisters.
 """
 from collections import defaultdict
 from collections.abc import Sequence

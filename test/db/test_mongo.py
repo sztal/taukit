@@ -62,10 +62,10 @@ class TestDocumentMixin:
         assert dct == item
 
 
-class TestMongoPersister:
+class TestMongoStorage:
 
     @pytest.mark.parametrize('item', TEST_DOCUMENT_DATA)
-    def test_persist_and_query(self, item, mdbstore):
+    def test_save(self, item, mdbstore):
         n0 = len(mdbstore.model.objects)
         mdbstore.save(item)
         n1 = len(mdbstore.model.objects)
@@ -73,7 +73,7 @@ class TestMongoPersister:
 
     @pytest.mark.parametrize('items', [TEST_DOCUMENT_DATA])
     @pytest.mark.parametrize('batch_size', [0, 50])
-    def test_persist_many(self, items, batch_size, TestDocument):
+    def test_bulk_update(self, items, batch_size, TestDocument):
         items = [ x.copy() for x in chain.from_iterable(repeat(items, 50)) ]
         output = TestDocument.store(
             batch_size=batch_size,

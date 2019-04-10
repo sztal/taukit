@@ -1,11 +1,11 @@
-"""Unit tests for persistence classes."""
+"""Unit tests for storage classes."""
 from shutil import rmtree
 from tempfile import mkdtemp
 import pytest
 from taukit.storage import JSONLinesStorage
 
 
-class TestJSONLinesPersister:
+class TestJSONLinesStorage:
 
     @pytest.fixture(scope='function')
     def jl_store(self):

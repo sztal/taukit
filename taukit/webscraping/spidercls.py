@@ -33,9 +33,9 @@ class TauSpiderMixin:
         the spider care for selecting only the proper ones.
     storage : {'full', 'nodb', 'no'}
         Kind of storage to be used. If `'full'` (default) then both disk
-        and database persistence is used. If `'nodb'` then only disk is used.
-        If `'no'` then results are not persisted at tall.
-        Concrete spiders have to define proper persister objects.
+        and database storage is used. If `'nodb'` then only disk is used.
+        If `'no'` then results are not stored at tall.
+        Concrete spiders have to define proper storage objects.
     rules : list or tuple
         Documented in :py:class:`scrapy.spiders.CrawlSpider`.
     item_loader : ItemLoader

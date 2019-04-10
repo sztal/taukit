@@ -278,8 +278,6 @@ class DBStorage(Storage):
         """
         batch_size = batch_size if batch_size is not None else self.batch_size
         updater = updater if updater else self.updater
-        if updater is not None:
-            items = [ updater(item) for item in  items ]
         if not batch_size or batch_size <= 0:
             items = [items]
         else:
@@ -290,6 +288,7 @@ class DBStorage(Storage):
             while attempt < n_attempts:
                 mname = self.model.__name__
                 try:
+                    batch = [ updater(x) for x in batch ]
                     res = self.make_bulk_update(batch, **kwds)
                     msg = f"Bulk update '{mname}' {res}"
                     self.logger.info(msg)

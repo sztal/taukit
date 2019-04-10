@@ -28,7 +28,8 @@ class Storage:
     item_name : str
         Item name to use in messages.
     """
-    def __init__(self, log_messages=False, print_messages=True, item_name='item'):
+    def __init__(self, log_messages=False, print_messages=True,
+                 item_name='item', count_items=True):
         """Initialization method."""
         self.logger = \
             getLogger(self.__class__.__module__+'.'+self.__class__.__name__)
@@ -36,6 +37,7 @@ class Storage:
         self.log_messages = log_messages
         self.print_messages = print_messages
         self.item_name = item_name
+        self.count_items = count_items
 
     def message(self):
         """Message item processing."""
@@ -50,26 +52,24 @@ class Storage:
         if self.log_messages:
             self.logger.info(msg)
 
-    def pipe_item(self, item, count_items=True):
+    def pipe_item(self, item):
         """Pipe item and report item count."""
-        if count_items:
+        if self.count_items:
             self._items_counter += 1
             self.message()
         return item
 
-    def save(self, item, count_items=True, **kwds):
+    def save(self, item, **kwds):
         """Save item to storage.
 
         Parameters
         ----------
         item : object
             Object to save.
-        count_items : bool
-            Should track of number of stored items be kept.
         **kwds :
             Keyword arguments passed to the `save_item` method.
         """
-        item = self.pipe_item(item, count_items=count_items)
+        item = self.pipe_item(item)
         return self.save_item(item, **kwds)
 
     def save_item(self, item):
@@ -229,6 +229,7 @@ class DBStorage(Storage):
 
     def updater(self, item):
         """Convert item to bulk update action."""
+        item = self.pipe_item(item)
         if self.processor:
             item = self.processor(item)
         if self._updater:

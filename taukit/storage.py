@@ -209,13 +209,17 @@ class DBStorage(Storage):
     updater : callable
         Default updater function for making bulk updates.
         If not provided then class default method is used.
+    processor : callable
+        Optional callable for preprocessing items
+        before turning them into update statements.
     """
-    def __init__(self, model, batch_size=None, updater=None, **kwds):
+    def __init__(self, model, batch_size=None, updater=None, processor=None, **kwds):
         """Initialization method."""
         super().__init__(self, **kwds)
         self.model = model
         self.batch_size = batch_size
         self._updater = updater
+        self.processor = processor
 
     def __repr__(self):
         module = self.__class__.__module__
@@ -225,9 +229,11 @@ class DBStorage(Storage):
 
     def updater(self, item):
         """Convert item to bulk update action."""
+        if self.processor:
+            item = self.processor(item)
         if self._updater:
-            return self._updater(item)
-        raise NotImplementedError
+            item = self._updater(item)
+        return item
 
     def make_bulk_update(self, items, **kwds):
         """Perform bulk update.
@@ -256,8 +262,7 @@ class DBStorage(Storage):
         results.append(new_result)
         return results
 
-    def bulk_update(self, items, batch_size=None,
-                    updater=None, n_attempts=3, **kwds):
+    def bulk_update(self, items, batch_size=None, n_attempts=3, **kwds):
         """Handle bulk update.
 
         Parameters
@@ -266,9 +271,6 @@ class DBStorage(Storage):
             Items to update.
         batch_size : int
             Optional batch size. If ``None`` then instance attribute is used.
-        updater : callable
-            Optional callable to be called on the items
-            to transform then to a form proper for updating.
         n_attempts : int
             Number of update attempts before failing.
             This is useful when there may be connection errors.
@@ -277,7 +279,6 @@ class DBStorage(Storage):
             the database specific logic.
         """
         batch_size = batch_size if batch_size is not None else self.batch_size
-        updater = updater if updater else self.updater
         if not batch_size or batch_size <= 0:
             items = [items]
         else:
@@ -288,7 +289,7 @@ class DBStorage(Storage):
             while attempt < n_attempts:
                 mname = self.model.__name__
                 try:
-                    batch = [ updater(x) for x in batch ]
+                    batch = [ self.updater(x) for x in batch ]
                     res = self.make_bulk_update(batch, **kwds)
                     msg = f"Bulk update '{mname}' {res}"
                     self.logger.info(msg)
@@ -318,12 +319,13 @@ class MongoStorage(DBStorage):
         Optional default updater function for making bulk updates.
     """
     def __init__(self, model, batch_size=0, updater=None,
-                 item_name='document', **kwds):
+                 processor=None, item_name='document', **kwds):
         """Initialization method."""
         super().__init__(
             model=model,
             batch_size=batch_size,
             updater=updater,
+            processor=processor,
             item_name=item_name,
             **kwds
         )
@@ -340,15 +342,15 @@ class MongoStorage(DBStorage):
         **kwds :
             Keyword arguments passed to :py:class:`pymongo.UpdateOne` constructor.
         """
-        try:
-            return super().updater(item)
-        except NotImplementedError:
-            return UpdateOne(
+        item = super().updater(item)
+        if not self._updater:
+            item = UpdateOne(
                 filter={ '_id': item.pop('_id') },
                 update={ '$set': item },
                 upsert=upsert,
                 **kwds
             )
+        return item
 
     def save_item(self, item, **kwds):
         """Save an item.

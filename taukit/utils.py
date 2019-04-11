@@ -2,6 +2,7 @@
 import re
 import os
 import io
+from itertools import groupby
 from importlib import import_module
 from datetime import datetime, date
 import dateparser
@@ -235,16 +236,10 @@ def parse_bool(x, true=('true', 'yes', '1', 'on'), add_true=(),
         return False
     raise ValueError("Value '{}' can not be interpreted as boolean".format(x))
 
-def slice_chunks(x, n):
+def slice_chunks(items, n):
     """Yield successive n-sized chunks from an iterable"""
-    l = []
-    for item in x:
-        l.append(item)
-        if len(l) >= n:
-            yield l
-            l = []
-    if l:
-        yield l
+    for _, group in groupby(enumerate(items), key=lambda x: x[0] // n):
+        yield map(lambda x: x[1], group)
 
 def to_stream(obj):
     """Dump object to a bytes stream."""

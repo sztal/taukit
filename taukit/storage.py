@@ -290,7 +290,7 @@ class DBStorage(Storage):
             while attempt < n_attempts:
                 mname = self.model.__name__
                 try:
-                    batch = map(self.updater, batch)
+                    batch = [ self.updater(item) for item in batch ]
                     res = self.make_bulk_update(batch, **kwds)
                     msg = f"Bulk update '{mname}' {res}"
                     self.logger.info(msg)

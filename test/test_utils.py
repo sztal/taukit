@@ -3,7 +3,7 @@ import os
 from tempfile import mkdtemp
 import pytest
 from taukit.utils import import_python, make_filepath
-from taukit.utils import get_default
+from taukit.utils import get_default, dictmerge
 import taukit.base.metacls
 from taukit.base.metacls import Composable
 
@@ -49,4 +49,13 @@ def test_get_default(a, b):
 
     output = func(a, b)
     expected = get_default(a, 'b', defaults) + get_default(b, 'b', defaults)
+    assert output == expected
+
+@pytest.mark.parametrize('src,tgt,expected', [
+    ({'a': 1, 'b': 2}, {'b': 3}, {'a':1, 'b':3}),
+    ({'a': 1, 'b': {'c': 1, 'd': 2}}, {'b': {'c': 2, 'e': 5}},
+     {'a': 1, 'b': {'c': 2, 'd': 2, 'e': 5}})
+])
+def test_dictmerge(src, tgt, expected):
+    output = dictmerge(src, tgt)
     assert output == expected

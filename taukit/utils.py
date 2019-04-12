@@ -2,6 +2,7 @@
 import re
 import os
 import io
+from collections.abc import Mapping
 from itertools import groupby
 from importlib import import_module
 from datetime import datetime, date
@@ -282,3 +283,27 @@ def get_default(value, name, defaults):
     if value is None and name in defaults:
         value = defaults[name]
     return value
+
+def dictmerge(tgt, src, copy=True):
+    """Merge two dicts recursively.
+
+    Parameters
+    ----------
+    tgt : dict-like
+        Target dict being overwritten.
+    src : dict-like
+        Source dict.
+    copy : bool
+        Should dict be copied.
+    """
+    if copy:
+        tgt = tgt.copy()
+    for k, v in src.items():
+        if k in tgt:
+            if isinstance(v, Mapping) and isinstance(tgt[k], Mapping):
+                tgt[k] = dictmerge(tgt[k], v, copy=copy)
+            else:
+                tgt[k] = v
+        else:
+            tgt[k] = v
+    return tgt

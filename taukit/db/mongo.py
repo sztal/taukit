@@ -3,7 +3,6 @@
 The mixins are supposed to enhance standard *MongoEngine* models
 with various helper methods for importing, exporting and validating data.
 """
-import os
 from collections import defaultdict
 from collections.abc import Sequence
 from mongoengine import Document as _Document

@@ -3,7 +3,7 @@ import re
 import os
 import io
 from collections.abc import Mapping
-from itertools import groupby
+from itertools import islice
 from importlib import import_module
 from datetime import datetime, date
 import dateparser
@@ -239,8 +239,12 @@ def parse_bool(x, true=('true', 'yes', '1', 'on'), add_true=(),
 
 def slice_chunks(items, n):
     """Yield successive n-sized chunks from an iterable"""
-    for _, group in groupby(enumerate(items), key=lambda x: x[0] // n):
-        yield map(lambda x: x[1], group)
+    it = iter(items)
+    while True:
+        chunk = tuple(islice(it, n))
+        if not chunk:
+            return
+        yield chunk
 
 def to_stream(obj):
     """Dump object to a bytes stream."""

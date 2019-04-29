@@ -3,6 +3,7 @@
 The mixins are supposed to enhance standard *MongoEngine* models
 with various helper methods for importing, exporting and validating data.
 """
+import os
 from collections import defaultdict
 from collections.abc import Sequence
 from mongoengine import Document as _Document
@@ -12,7 +13,7 @@ from mongoengine import BooleanField, IntField, FloatField, DateTimeField
 from mongoengine import DictField, ListField
 from mongoengine import EmbeddedDocumentField, EmbeddedDocumentListField
 from taukit.utils import parse_date, parse_bool
-from taukit.storage import MongoStorage
+from taukit.storage import MongoStorage, JSONLinesStorage
 
 
 def obj_to_query(obj, name):
@@ -204,6 +205,24 @@ class DocumentMixin:
             'updater': getattr(cls, 'updater', None),
             **kwds
         })
+
+    @classmethod
+    def import_from_jl(cls, path, mode='r', **kwds):
+        """Import documents from `jsonlines` file.
+
+        Parameters
+        ----------
+        path : str
+            Filepath.
+        mode : str
+            File open mode.
+        **kwds :
+            Keyword arguments passed to `store` method for
+            setting up a storage object.
+        """
+        docs = JSONLinesStorage.load_jl(path, mode)
+        kwds = { 'batch_size': 20000, **kwds }
+        cls.store(**kwds).bulk_update(docs)
 
 
 class Document(_Document, DocumentMixin):

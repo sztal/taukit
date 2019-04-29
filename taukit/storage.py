@@ -146,7 +146,7 @@ class JSONLinesStorage(FileStorage):
         JSON encoder class.
     json_decoder : json.JSONDecoder
         JSON decoder class.
-    if_exists : {'inc', 'increment', 'raise'}
+    if_exists : {'inc', 'increment', 'raise', 'append'}
         What to do if the specified filepath is already taken.
         If ``'inc'`` or ``'increment'`` then counting number is added
         to the filename. If ``'raise'`` then `FileExsistsError` is raised.
@@ -181,13 +181,25 @@ class JSONLinesStorage(FileStorage):
             f.write(json.dumps(item, cls=self.json_encoder).strip()+"\n")
 
     @staticmethod
-    def load_jl(filepath, json_decoder=None):
-        with open(filepath, 'r') as f:
+    def load_jl(filepath, mode='r', json_decoder=None):
+        """Load JSON-lines file.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath.
+        mode : str
+            File open mode.
+        json_decoder:
+            JSON decoder class.
+        """
+        with open(filepath, mode) as f:
             for line in f:
                 yield json.loads(line.strip(), cls=json_decoder)
 
-    def load(self):
-        yield from self.load_jl(self.filepath, json_decoder=self.json_decoder)
+    def load(self, mode='r'):
+        yield from self.load_jl(self.filepath, mode=mode,
+                                json_decoder=self.json_decoder)
 
 
 # Database storage ------------------------------------------------------------
@@ -289,8 +301,8 @@ class DBStorage(Storage):
             attempt = 0
             while attempt < n_attempts:
                 mname = self.model.__name__
+                batch = [ self.updater(item) for item in batch ]
                 try:
-                    batch = [ self.updater(item) for item in batch ]
                     res = self.make_bulk_update(batch, **kwds)
                     msg = f"Bulk update '{mname}' {res}"
                     self.logger.info(msg)

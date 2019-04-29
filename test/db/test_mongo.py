@@ -1,11 +1,16 @@
 """Test MongoDB models, model mixins and related utilities."""
 # pylint: disable=redefined-outer-name
+import os
 from datetime import datetime
 from itertools import repeat, chain
+from tempfile import mkstemp
+import json
 import pytest
 from pymongo import InsertOne
 import mongoengine
-from mongoengine import StringField, IntField, DateTimeField, EmbeddedDocumentField
+from mongoengine import StringField, IntField
+from mongoengine import DateTimeField, EmbeddedDocumentField
+from taukit.serializers import JSONEncoder
 from taukit.storage import MongoStorage
 from taukit.db.mongo import Document, EmbeddedDocument
 
@@ -50,6 +55,15 @@ TEST_DOCUMENT_DATA = [{
     'author': {'name': 'Jane', 'surname': 'Doe'}
 }]
 
+@pytest.fixture(scope='session')
+def jl_datapath():
+    _, path = mkstemp()
+    with open(path, 'w') as f:
+        for doc in TEST_DOCUMENT_DATA:
+            f.write(json.dumps(doc, cls=JSONEncoder)+"\n")
+    yield path
+    os.remove(path)
+
 
 class TestDocumentMixin:
 
@@ -80,3 +94,6 @@ class TestMongoStorage:
             updater=InsertOne
         ).bulk_update(items)
         assert output['nInserted'] == 100
+
+    def test_import_from_jl(self, jl_datapath, TestDocument):
+        TestDocument.import_from_jl(jl_datapath, updater=InsertOne)

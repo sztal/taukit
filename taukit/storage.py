@@ -355,6 +355,7 @@ class MongoStorage(DBStorage):
         **kwds :
             Keyword arguments passed to :py:class:`pymongo.UpdateOne` constructor.
         """
+        item = self.model.from_dict(item, only_dict=True)
         item = super().updater(item)
         if not self._updater:
             item = UpdateOne(

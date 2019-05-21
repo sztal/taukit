@@ -304,9 +304,9 @@ class DBStorage(Storage):
                 batch = [ self.updater(item) for item in batch ]
                 try:
                     res = self.make_bulk_update(batch, **kwds)
-                    msg = f"Bulk update '{mname}' {res}"
-                    self.logger.info(msg)
                     results = self.format_bulk_update_results(results, res)
+                    msg = f"Bulk update '{mname}' {results}"
+                    self.logger.info(msg)
                     break
                 # pylint: disable=broad-except
                 except Exception as exc:

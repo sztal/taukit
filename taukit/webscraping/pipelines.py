@@ -11,7 +11,7 @@ class TauItemPipeline:
         self.disk = None
 
     def open_spider(self, spider):
-        if spider.storage.lower() != 'no':
+        if spider.storage.lower() not in ('no', 'none'):
             self.setup_disk_storage(spider)
         if spider.storage.lower() not in ('no', 'none', 'nodb'):
             self.setup_db_storage(spider)

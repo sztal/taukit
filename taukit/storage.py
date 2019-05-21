@@ -227,7 +227,7 @@ class DBStorage(Storage):
     """
     def __init__(self, model, batch_size=None, updater=None, processor=None, **kwds):
         """Initialization method."""
-        super().__init__(self, **kwds)
+        super().__init__(**kwds)
         self.model = model
         self.batch_size = batch_size
         self._updater = updater

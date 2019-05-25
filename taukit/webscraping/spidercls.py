@@ -77,7 +77,8 @@ class TauSpiderMixin:
         """
         if not self.start_urls:
             raise NotImplementedError
-        yield from self.start_urls
+        for url in self.start_urls:
+            yield url, {}
 
     def start_requests(self):
         """Generate start requests."""

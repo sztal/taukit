@@ -31,8 +31,10 @@ def TestDocument(mdb):
     class TestDoc(Document):
         title = StringField(required=True)
         rating = IntField()
-        created_at = DateTimeField(required=True)
+        created_at = DateTimeField(required=False)
         author = EmbeddedDocumentField(EmbeddedDoc)
+
+        _ignore_fields = ('_id', 'id')
 
     yield TestDoc
     TestDoc.drop_collection()
@@ -49,8 +51,10 @@ TEST_DOCUMENT_DATA = [{
     'title': 'A',
     'rating': 2,
     'created_at': datetime.now(),
+    'author': None
 }, {
     'title': 'B',
+    'rating': None,
     'created_at': '2017-08-11',
     'author': {'name': 'Jane', 'surname': 'Doe'}
 }]
@@ -70,7 +74,7 @@ class TestDocumentMixin:
     @pytest.mark.parametrize('item', TEST_DOCUMENT_DATA)
     def test_dict_converters(self, item, TestDocument):
         doc = TestDocument.from_dict(item)
-        dct = doc.to_dict(remove_empty_fields=True)
+        dct = doc.to_dict(ignore_fields=True)
         if isinstance(item['created_at'], str):
             dct['created_at'] = dct['created_at'].strftime("%Y-%m-%d")
         assert dct == item

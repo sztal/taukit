@@ -91,6 +91,7 @@ class DocumentMixin:
         field_type = field.__class__
         _schema = cls._baseschema.get(field_type, {}).copy()
         _schema.update(getattr(field, 'schema', {}))
+        _schema['required'] = field.required
         rename = cls._field_names_map.get(field_name, [])
         if rename and isinstance(rename, str):
             rename = [ rename ]
@@ -148,7 +149,7 @@ class DocumentMixin:
             if 'rename' in s:
                 k = s['rename']
                 s = schema[k]
-            if 'coerce' in s:
+            if not (not s['required'] and v is None) and 'coerce' in s :
                 v = s['coerce'](v)
             doc[k] = v
         if only_dict:

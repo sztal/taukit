@@ -358,8 +358,9 @@ class MongoStorage(DBStorage):
         item = self.model.from_dict(item, only_dict=True)
         item = super().updater(item)
         if not self._updater:
+            _id = self.model.id.name
             item = UpdateOne(
-                filter={ '_id': item.pop('_id') },
+                filter={ _id: item.pop(_id) },
                 update={ '$set': item },
                 upsert=upsert,
                 **kwds

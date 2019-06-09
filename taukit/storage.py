@@ -297,10 +297,10 @@ class DBStorage(Storage):
         else:
             items = slice_chunks(items, batch_size)
         results = None
+        mname = self.model.__name__
         for batch in items:
             attempt = 0
             while attempt < n_attempts:
-                mname = self.model.__name__
                 batch = [ self.updater(item) for item in batch ]
                 try:
                     res = self.make_bulk_update(batch, **kwds)

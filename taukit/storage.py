@@ -5,6 +5,7 @@ persistence such as file, FTP, S3, Dropbox or database storage.
 """
 #pylint: disable=arguments-differ,protected-access
 import os
+from collections.abc import Mapping
 from logging import getLogger
 import json
 from ftplib import FTP_TLS
@@ -355,7 +356,8 @@ class MongoStorage(DBStorage):
         **kwds :
             Keyword arguments passed to :py:class:`pymongo.UpdateOne` constructor.
         """
-        item = self.model.from_dict(item, only_dict=True)
+        if isinstance(item, Mapping):
+            item = self.model.from_dict(item, only_dict=True)
         item = super().updater(item)
         if not self._updater:
             _id = self.model.id.name
